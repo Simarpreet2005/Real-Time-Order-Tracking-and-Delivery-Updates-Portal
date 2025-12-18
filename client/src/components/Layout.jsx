@@ -3,17 +3,20 @@ import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
-const Layout = ({ children, cartCount }) => {
+const Layout = ({ children, cartCount, user, onLogout }) => {
     const location = useLocation();
-    const hideNavPaths = ['/auth'];
-    const hideFooterPaths = ['/auth', '/track', '/admin'];
 
-    const showNavbar = !hideNavPaths.includes(location.pathname);
-    const showFooter = !hideFooterPaths.some(path => location.pathname.startsWith(path));
+    // Auth-first: Don't show Nav if not logged in (unless on Auth page)
+    const isAuthPage = location.pathname === '/auth';
+    const hasAccess = user && user.role === 'customer';
+
+    // Hide for Admin, Rider, and Auth pages
+    const showNavbar = !isAuthPage && hasAccess;
+    const showFooter = !isAuthPage && hasAccess;
 
     return (
         <div className="min-h-screen flex flex-col bg-background font-sans">
-            {showNavbar && <Navbar cartCount={cartCount} />}
+            {showNavbar && <Navbar cartCount={cartCount} user={user} onLogout={onLogout} />}
             <main className={`flex-grow ${showNavbar ? 'pt-24' : ''}`}>
                 {children}
             </main>

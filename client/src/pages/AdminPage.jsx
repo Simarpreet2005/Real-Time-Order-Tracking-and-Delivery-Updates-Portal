@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Package, Truck, MapPin, Plus, RefreshCw } from 'lucide-react';
+import { io } from 'socket.io-client';
 
-const AdminPage = () => {
+const AdminPage = ({ onLogout }) => {
     const [orders, setOrders] = useState([]);
+    const [riders, setRiders] = useState([]);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [loading, setLoading] = useState(true);
-
-    // New Order Form State
     const [newOrder, setNewOrder] = useState({
         trackingId: '',
         customerName: '',
@@ -21,13 +21,49 @@ const AdminPage = () => {
             setLoading(false);
         } catch (err) {
             console.error(err);
-            setLoading(false);
         }
     };
 
+    const fetchRiders = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/users/riders');
+            setRiders(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+
+
+    // ... inside AdminPage ...
     useEffect(() => {
+        const socket = io('http://localhost:5000');
+        socket.emit('joinAdminRoom');
+
+        socket.on('orderUpdated', (updatedOrder) => {
+            setOrders(prev => prev.map(o => o.trackingId === updatedOrder.trackingId ? updatedOrder : o));
+            if (selectedOrder && selectedOrder.trackingId === updatedOrder.trackingId) {
+                setSelectedOrder(updatedOrder);
+            }
+        });
+
         fetchOrders();
+        fetchRiders();
+
+        return () => socket.disconnect();
     }, []);
+
+    const assignRider = async (riderId) => {
+        if (!selectedOrder) return;
+        try {
+            await axios.put(`http://localhost:5000/api/orders/${selectedOrder.trackingId}/assign`, { riderId });
+            fetchOrders();
+            alert('Rider Assigned!');
+        } catch (err) {
+            console.error(err);
+            alert('Assignment failed');
+        }
+    };
 
     const createOrder = async (e) => {
         e.preventDefault();
@@ -64,36 +100,19 @@ const AdminPage = () => {
         }
     };
 
-    const moveRider = async () => {
-        if (!selectedOrder) return;
 
-        // Simulate movement: move slightly north-east
-        const currentLat = selectedOrder.currentLocation?.lat || 28.6139;
-        const currentLng = selectedOrder.currentLocation?.lng || 77.2090;
-
-        const newLocation = {
-            lat: currentLat + 0.001,
-            lng: currentLng + 0.001,
-            address: `En route (${(currentLat + 0.001).toFixed(4)}, ${(currentLng + 0.001).toFixed(4)})`
-        };
-
-        try {
-            await axios.put(`http://localhost:5000/api/orders/${selectedOrder.trackingId}/status`, {
-                status: selectedOrder.status, // keep status
-                location: newLocation
-            });
-
-            const updated = { ...selectedOrder, currentLocation: newLocation };
-            setSelectedOrder(updated);
-            setOrders(orders.map(o => o.trackingId === updated.trackingId ? updated : o));
-        } catch (err) {
-            console.error(err);
-        }
-    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-8">
-            <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+                <button
+                    onClick={onLogout}
+                    className="bg-black text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition-colors"
+                >
+                    Logout
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Create Order Panel */}
@@ -165,6 +184,30 @@ const AdminPage = () => {
                             <div>
                                 <p className="text-sm text-gray-500 mb-2">Selected Order</p>
                                 <p className="font-bold text-lg">#{selectedOrder.trackingId}</p>
+                                <div className="mt-2 text-sm">
+                                    <p><strong>Customer:</strong> {selectedOrder.customer?.name}</p>
+                                    <p><strong>Email:</strong> {selectedOrder.customer?.email || 'N/A'}</p>
+                                    <p><strong>Address:</strong> {selectedOrder.customer?.address}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">Assign Delivery Partner</p>
+                                <select
+                                    className="w-full p-3 border rounded-lg bg-white"
+                                    onChange={(e) => assignRider(e.target.value)}
+                                    value={selectedOrder.deliveryPersonId?._id || ""}
+                                >
+                                    <option value="">Select Rider</option>
+                                    {riders.map(r => (
+                                        <option key={r._id} value={r._id}>{r.name} ({r.email})</option>
+                                    ))}
+                                </select>
+                                {selectedOrder.deliveryPersonId && (
+                                    <p className="text-xs text-green-600 font-bold mt-1">
+                                        Assigned to: {selectedOrder.deliveryPersonId.name}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -182,19 +225,7 @@ const AdminPage = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t">
-                                <p className="text-sm font-medium mb-4">Live Simulation</p>
-                                <button
-                                    onClick={moveRider}
-                                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all"
-                                >
-                                    <RefreshCw className="h-5 w-5" />
-                                    Move Rider (Update GPS)
-                                </button>
-                                <p className="text-xs text-gray-400 mt-2 text-center">
-                                    Click manually to simulate rider movement updates
-                                </p>
-                            </div>
+
                         </div>
                     ) : (
                         <div className="text-center text-gray-400 py-12">

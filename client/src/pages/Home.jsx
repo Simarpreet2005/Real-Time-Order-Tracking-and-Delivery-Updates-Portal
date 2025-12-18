@@ -3,6 +3,8 @@ import { ArrowRight, ChevronRight, Zap } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 
 const Home = ({ addToCart }) => {
+    const [searchQuery, setSearchQuery] = React.useState("");
+
     // Mock Data for Visuals
     const categories = [
         { name: 'Vegies', img: 'https://cdn-icons-png.flaticon.com/512/2329/2329903.png', color: 'bg-green-100' },
@@ -19,12 +21,14 @@ const Home = ({ addToCart }) => {
 
     const products = [
         { id: 1, name: 'Amul Taaza Fresh Milk', weight: '500 ml', price: 27, originalPrice: 30, image: 'https://www.bigbasket.com/media/uploads/p/l/306926_4-amul-homogenised-toned-milk.jpg', discount: 10 },
-        { id: 2, name: 'Lays India\'s Magic Masala', weight: '50g', price: 20, image: 'https://www.bigbasket.com/media/uploads/p/l/104975_16-lays-potato-chips-indias-magic-masala.jpg' },
-        { id: 3, name: 'Coca-Cola Soft Drink', weight: '750 ml', price: 40, originalPrice: 45, image: 'https://www.bigbasket.com/media/uploads/p/l/251006_11-coca-cola-soft-drink.jpg', discount: 11 },
+        { id: 2, name: 'Lays India\'s Magic Masala', weight: '50g', price: 20, image: '/images/lays.png' },
+        { id: 3, name: 'Coca-Cola Soft Drink', weight: '750 ml', price: 40, originalPrice: 45, image: '/images/coke.png', discount: 11 },
         { id: 4, name: 'Fortune Sun Lite Oil', weight: '1 L', price: 145, originalPrice: 170, image: 'https://www.bigbasket.com/media/uploads/p/l/274145_14-fortune-sun-lite-sunflower-refined-oil.jpg', discount: 15 },
-        { id: 5, name: 'Aashirvaad Atta', weight: '5 kg', price: 240, originalPrice: 280, image: 'https://www.bigbasket.com/media/uploads/p/l/126903_8-aashirvaad-atta-whole-wheat.jpg', discount: 14 },
-        { id: 6, name: 'Tata Salt Vacuum', weight: '1 kg', price: 28, image: 'https://www.bigbasket.com/media/uploads/p/l/241600_5-tata-salt-iodized.jpg' },
+        { id: 5, name: 'Aashirvaad Atta', weight: '5 kg', price: 240, originalPrice: 280, image: '/images/atta.png', discount: 14 },
+        { id: 6, name: 'Tata Salt Vacuum', weight: '1 kg', price: 28, image: '/images/salt.png' },
     ];
+
+    const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
         <div className="pb-20 bg-slate-50 min-h-screen">
@@ -43,6 +47,17 @@ const Home = ({ addToCart }) => {
                             <p className="text-indigo-200 text-lg max-w-lg">
                                 Fresh produce, daily essentials, and more. No minimum order, trusted by millions.
                             </p>
+
+                            <div className="relative max-w-md mt-8 group">
+                                <input
+                                    type="text"
+                                    placeholder="Search for items..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full py-4 pl-12 pr-4 rounded-xl bg-white text-gray-900 font-medium focus:ring-4 focus:ring-yellow-400/30 outline-none transition-all shadow-xl"
+                                />
+                                <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-900" />
+                            </div>
                         </div>
                         {/* Hero Image Mockup */}
                         <div className="relative hidden md:block">
@@ -118,12 +133,14 @@ const Home = ({ addToCart }) => {
                     </div>
                     {/* Horizontal Scroll Area */}
                     <div className="flex gap-4 overflow-x-auto pb-8 hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                        {products.map(product => (
+                        {filteredProducts.map(product => (
                             <ProductCard key={product.id} product={product} onAdd={addToCart} />
                         ))}
-                        {products.map(product => (
-                            <ProductCard key={`dup-${product.id}`} product={product} onAdd={addToCart} />
-                        ))}
+                        {filteredProducts.length === 0 && (
+                            <div className="py-12 bg-white rounded-2xl w-full text-center border border-dashed border-gray-200">
+                                <p className="text-gray-400 font-medium italic">No items matching "{searchQuery}"</p>
+                            </div>
+                        )}
                     </div>
                 </section>
 
@@ -136,7 +153,7 @@ const Home = ({ addToCart }) => {
                         </button>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-8 hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                        {[...products].reverse().map(product => (
+                        {[...filteredProducts].reverse().map(product => (
                             <ProductCard key={product.id} product={product} onAdd={addToCart} />
                         ))}
                     </div>

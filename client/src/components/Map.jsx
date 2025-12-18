@@ -48,8 +48,8 @@ const Map = ({ order }) => {
             <MapContainer center={riderPos} zoom={13} scrollWheelZoom={true} className="h-full w-full z-0">
                 <ChangeView center={riderPos} zoom={15} />
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    attribution='&copy; <a href="https://www.google.com/maps">Google Maps</a>'
+                    url="http://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
                 />
 
                 {/* Rider */}

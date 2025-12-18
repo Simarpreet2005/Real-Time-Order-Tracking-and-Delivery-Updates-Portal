@@ -21,7 +21,7 @@ const OrderReviewPage = ({ cart }) => {
                 trackingId: `ORD-${Date.now()}`,
                 customer: {
                     name: user?.name || 'Guest User',
-                    address: '123, Green Street, Tech City'
+                    address: localStorage.getItem('deliveryAddress') || '123, Green Street, Tech City'
                 },
                 initialLocation: { lat: 28.6139, lng: 77.2090, address: 'Dark Store #1' },
                 items: cart
@@ -84,7 +84,7 @@ const OrderReviewPage = ({ cart }) => {
                             </div>
                             <div>
                                 <h3 className="font-bold text-slate-900 text-sm">Delivery at Home</h3>
-                                <p className="text-xs text-slate-500">123, Green Street, Tech City</p>
+                                <p className="text-xs text-slate-500">{localStorage.getItem('deliveryAddress') || '123, Green Street, Tech City'}</p>
                             </div>
                         </div>
                         <button className="text-primary text-xs font-bold uppercase tracking-wide hover:underline">Change</button>

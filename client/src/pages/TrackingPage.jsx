@@ -37,7 +37,22 @@ const TrackingPage = () => {
 
         // Join room
         socket.emit('joinOrder', trackingId);
-        socket.on('orderUpdated', (updatedOrder) => setOrder(updatedOrder));
+
+        socket.on('orderUpdated', (updatedOrder) => {
+            console.log('[DEBUG] TrackingPage received orderUpdated:', updatedOrder);
+            setOrder(updatedOrder);
+        });
+
+        socket.on('locationUpdate', (newLocation) => {
+            console.log('Received locationUpdate:', newLocation);
+            setOrder(prev => prev ? ({
+                ...prev,
+                currentLocation: {
+                    ...prev.currentLocation,
+                    ...newLocation
+                }
+            }) : prev);
+        });
 
         return () => socket.disconnect();
     }, [trackingId]);

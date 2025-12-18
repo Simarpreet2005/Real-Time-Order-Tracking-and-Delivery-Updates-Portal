@@ -5,11 +5,11 @@ import ProductCard from '../components/ProductCard';
 
 const products = [
     { id: 1, name: 'Amul Taaza Fresh Milk', weight: '500 ml', price: 27, originalPrice: 30, image: 'https://www.bigbasket.com/media/uploads/p/l/306926_4-amul-homogenised-toned-milk.jpg', discount: 10 },
-    { id: 2, name: 'Lays India\'s Magic Masala', weight: '50g', price: 20, image: 'https://www.bigbasket.com/media/uploads/p/l/104975_16-lays-potato-chips-indias-magic-masala.jpg' },
-    { id: 3, name: 'Coca-Cola Soft Drink', weight: '750 ml', price: 40, originalPrice: 45, image: 'https://www.bigbasket.com/media/uploads/p/l/251006_11-coca-cola-soft-drink.jpg', discount: 11 },
+    { id: 2, name: 'Lays India\'s Magic Masala', weight: '50g', price: 20, image: '/images/lays.png' },
+    { id: 3, name: 'Coca-Cola Soft Drink', weight: '750 ml', price: 40, originalPrice: 45, image: '/images/coke.png', discount: 11 },
     { id: 4, name: 'Fortune Sun Lite Oil', weight: '1 L', price: 145, originalPrice: 170, image: 'https://www.bigbasket.com/media/uploads/p/l/274145_14-fortune-sun-lite-sunflower-refined-oil.jpg', discount: 15 },
-    { id: 5, name: 'Aashirvaad Atta', weight: '5 kg', price: 240, originalPrice: 280, image: 'https://www.bigbasket.com/media/uploads/p/l/126903_8-aashirvaad-atta-whole-wheat.jpg', discount: 14 },
-    { id: 6, name: 'Tata Salt Vacuum', weight: '1 kg', price: 28, image: 'https://www.bigbasket.com/media/uploads/p/l/241600_5-tata-salt-iodized.jpg' },
+    { id: 5, name: 'Aashirvaad Atta', weight: '5 kg', price: 240, originalPrice: 280, image: '/images/atta.png', discount: 14 },
+    { id: 6, name: 'Tata Salt Vacuum', weight: '1 kg', price: 28, image: '/images/salt.png' },
     { id: 7, name: 'Onion - Medium', weight: '1 kg', price: 35, originalPrice: 50, image: 'https://www.bigbasket.com/media/uploads/p/l/10000148_30-fresho-onion-medium.jpg', discount: 30 },
     { id: 8, name: 'Potato', weight: '1 kg', price: 40, originalPrice: 45, image: 'https://www.bigbasket.com/media/uploads/p/l/10000159_25-fresho-potato.jpg' },
 ];
