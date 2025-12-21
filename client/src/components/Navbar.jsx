@@ -61,10 +61,10 @@ const Navbar = ({ cartCount = 0, user, onLogout }) => {
                         <div className="flex items-center gap-6 min-w-fit">
                             <Link to="/" className="flex items-center gap-2 group">
                                 <div className="bg-primary p-2.5 rounded-xl transition-transform group-hover:scale-105">
-                                    <span className="text-white font-bold text-xl tracking-tighter">BV</span>
+                                    <span className="text-white font-bold text-xl tracking-tighter">dr</span>
                                 </div>
                                 <div className="hidden md:block">
-                                    <h1 className="font-bold text-2xl tracking-tight text-primary leading-none">BlinkVibe</h1>
+                                    <h1 className="font-bold text-2xl tracking-tight text-primary leading-none">delivery reimagined</h1>
                                     <p className="text-xs text-slate-500 font-medium tracking-wide">PREMIUM DELIVERY</p>
                                 </div>
                             </Link>
@@ -81,16 +81,9 @@ const Navbar = ({ cartCount = 0, user, onLogout }) => {
                             </div>
                         </div>
 
-                        {/* Search Bar - Center */}
+                        {/* Search Bar - Center (Removed) */}
                         <div className="hidden md:flex flex-1 max-w-2xl px-8">
-                            <div className="relative w-full group">
-                                <input
-                                    type="text"
-                                    placeholder="Search for 'milk', 'chips', 'iphone'..."
-                                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm group-hover:shadow-md"
-                                />
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-primary transition-colors" />
-                            </div>
+                            {/* Search Removed */}
                         </div>
 
                         {/* Actions */}
@@ -102,6 +95,9 @@ const Navbar = ({ cartCount = 0, user, onLogout }) => {
                                             <span className="text-[10px] text-slate-400 capitalize font-bold tracking-widest leading-none mb-1">{user.role}</span>
                                             <span className="text-sm font-bold text-slate-900">{user.name}</span>
                                         </div>
+                                        <Link to="/my-orders" className="text-xs font-bold text-slate-700 hover:text-primary">
+                                            Orders
+                                        </Link>
                                         <button
                                             onClick={onLogout}
                                             className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors border border-red-100"

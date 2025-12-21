@@ -8,15 +8,25 @@ const socket = io('http://localhost:5000');
 const RiderDashboard = ({ onLogout }) => {
     const [orders, setOrders] = useState([]);
     const [user] = useState(JSON.parse(localStorage.getItem('user')));
+    const [gpsStatus, setGpsStatus] = useState('idle'); // idle, searching, active, error
+
 
     useEffect(() => {
-        // Join rider-specific room
         const userId = user._id || user.id;
-        socket.emit('joinRiderRoom', userId);
+
+        const joinRoom = () => {
+            console.log("Joining rider room:", userId);
+            socket.emit('joinRiderRoom', userId);
+        };
+
+        if (socket.connected) {
+            joinRoom();
+        }
+
+        socket.on('connect', joinRoom);
 
         const fetchOrders = async () => {
             try {
-                const userId = user._id || user.id;
                 const res = await axios.get(`http://localhost:5000/api/orders/rider/${userId}`);
                 setOrders(res.data);
             } catch (err) {
@@ -27,15 +37,16 @@ const RiderDashboard = ({ onLogout }) => {
 
         // Listen for new assignments
         socket.on('orderAssigned', (newOrder) => {
-            // Play notification sound if desired
+            console.log("Received new order assignment:", newOrder);
             setOrders(prev => [newOrder, ...prev]);
             alert(`New Order Assigned: #${newOrder.trackingId}`);
         });
 
         return () => {
+            socket.off('connect', joinRoom);
             socket.off('orderAssigned');
         };
-    }, [user._id]);
+    }, [user._id, user.id]);
 
     useEffect(() => {
         let watchId;
@@ -43,65 +54,121 @@ const RiderDashboard = ({ onLogout }) => {
 
         if (activeOrders.length > 0 && "geolocation" in navigator) {
             console.log("Starting GPS tracking for orders:", activeOrders.map(o => o.trackingId));
-            watchId = navigator.geolocation.watchPosition(
-                (pos) => {
-                    const { latitude, longitude } = pos.coords;
-                    activeOrders.forEach(order => {
-                        socket.emit('updateLocation', {
-                            trackingId: order.trackingId,
-                            location: { lat: latitude, lng: longitude }
+            setGpsStatus('searching');
+
+            const startWatch = (highAccuracy = true) => {
+                watchId = navigator.geolocation.watchPosition(
+                    (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        console.log(`[GPS UPDATE] Lat: ${latitude}, Lng: ${longitude}`);
+                        setGpsStatus('active');
+                        activeOrders.forEach(order => {
+                            socket.emit('updateLocation', {
+                                trackingId: order.trackingId,
+                                location: { lat: latitude, lng: longitude }
+                            });
                         });
-                    });
-                },
-                (err) => console.error("GPS Error:", err),
-                { enableHighAccuracy: true }
-            );
+                    },
+                    (err) => {
+                        console.error("GPS Watch Error:", err);
+                        if (highAccuracy && (err.code === 2 || err.code === 3)) {
+                            console.log("Retrying GPS watch with lower accuracy...");
+                            navigator.geolocation.clearWatch(watchId);
+                            startWatch(false);
+                        } else {
+                            setGpsStatus('error');
+                        }
+                    },
+                    {
+                        enableHighAccuracy: highAccuracy,
+                        maximumAge: 15000,
+                        timeout: 30000
+                    }
+                );
+            };
+
+            startWatch(true);
+        } else {
+            console.log("No active orders or GPS not supported.");
         }
 
         return () => {
-            if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (watchId) {
+                console.log("Stopping GPS tracking");
+                navigator.geolocation.clearWatch(watchId);
+            }
         };
     }, [orders]);
 
     const handleStatusUpdate = async (trackingId, nextStatus) => {
         try {
-            // Get current location for the initial status update
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    let addressText = "Current GPS Location";
-                    try {
-                        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
-                        const geoData = await geoRes.json();
-                        addressText = geoData.display_name;
-                    } catch (e) {
-                        console.error("Geocoding failed", e);
-                    }
+            console.log(`Updating status to ${nextStatus} for ${trackingId}`);
 
-                    const location = {
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                        address: addressText
-                    };
+            const updateStatus = async (location = null) => {
+                const payload = { status: nextStatus };
+                if (location) payload.location = location;
 
-                    await axios.put(`http://localhost:5000/api/orders/${trackingId}/status`, {
-                        status: nextStatus,
-                        location
-                    });
-
-                    // Refresh orders to trigger the watchPosition useEffect
+                try {
+                    await axios.put(`http://localhost:5000/api/orders/${trackingId}/status`, payload);
                     const res = await axios.get(`http://localhost:5000/api/orders/rider/${user._id}`);
                     setOrders(res.data);
-                });
+                } catch (apiErr) {
+                    console.error("API update failed:", apiErr);
+                    alert("Failed to update status on server.");
+                }
+            };
+
+            const getAddress = async (lat, lng) => {
+                try {
+                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const geoData = await geoRes.json();
+                    return geoData.display_name;
+                } catch (e) {
+                    console.error("Geocoding failed", e);
+                    return "GPS Location";
+                }
+            };
+
+            if ("geolocation" in navigator) {
+                // Strategy: Try High Accuracy -> Fail -> Try Low Accuracy -> Fail -> No Location
+
+                const getPosition = (options) => {
+                    return new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+                    });
+                };
+
+                try {
+                    // Attempt 1: High Accuracy (15s timeout)
+                    console.log("Attempting High Accuracy GPS...");
+                    const pos = await getPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+                    const address = await getAddress(pos.coords.latitude, pos.coords.longitude);
+                    await updateStatus({ lat: pos.coords.latitude, lng: pos.coords.longitude, address });
+
+                } catch (err1) {
+                    console.warn("High Accuracy GPS failed/timed out:", err1.message);
+
+                    try {
+                        // Attempt 2: Low Accuracy (15s timeout) - faster, uses cell towers/WiFi
+                        console.log("Retrying with Low Accuracy GPS...");
+                        const pos = await getPosition({ enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 });
+                        const address = await getAddress(pos.coords.latitude, pos.coords.longitude);
+                        await updateStatus({ lat: pos.coords.latitude, lng: pos.coords.longitude, address });
+
+                    } catch (err2) {
+                        console.error("All GPS attempts failed:", err2.message);
+                        console.log("Proceeding without location.");
+                        // Attempt 3: No Location
+                        await updateStatus(null);
+                    }
+                }
             } else {
-                // Fallback if no geolocation
-                await axios.put(`http://localhost:5000/api/orders/${trackingId}/status`, {
-                    status: nextStatus
-                });
-                const res = await axios.get(`http://localhost:5000/api/orders/rider/${user._id}`);
-                setOrders(res.data);
+                console.log("Geolocation not supported by browser.");
+                await updateStatus(null);
             }
         } catch (err) {
-            console.error(err);
+            console.error("Critical error in logic:", err);
+            alert("Unexpected error. Please try again.");
         }
     };
 
@@ -112,6 +179,13 @@ const RiderDashboard = ({ onLogout }) => {
                     <Navigation className="text-red-500" />
                     Delivery Dashboard
                 </h1>
+                <div className={`px-3 py-1 rounded-full text-xs font-bold ${gpsStatus === 'active' ? 'bg-green-100 text-green-600' :
+                    gpsStatus === 'searching' ? 'bg-yellow-100 text-yellow-600' :
+                        gpsStatus === 'error' ? 'bg-red-100 text-red-600' :
+                            'bg-gray-100 text-gray-500'
+                    }`}>
+                    GPS: {gpsStatus.toUpperCase()}
+                </div>
                 <button
                     onClick={onLogout}
                     className="bg-red-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-600 transition-colors"

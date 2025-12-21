@@ -12,6 +12,7 @@ import OrderReviewPage from './pages/OrderReviewPage';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import RiderDashboard from './pages/RiderDashboard';
+import MyOrders from './pages/MyOrders';
 
 function App() {
   const [cart, setCart] = useState([]);
@@ -63,6 +64,11 @@ function App() {
           <Route path="/track/:trackingId" element={
             <ProtectedRoute user={user} role="customer">
               <TrackingPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-orders" element={
+            <ProtectedRoute user={user} role="customer">
+              <MyOrders />
             </ProtectedRoute>
           } />
 

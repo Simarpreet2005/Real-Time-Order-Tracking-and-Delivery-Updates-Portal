@@ -55,7 +55,7 @@ const Auth = ({ onLogin }) => {
                 <div className="md:w-1/2 bg-black text-white p-12 flex flex-col justify-between relative overflow-hidden">
                     <div className="relative z-10">
                         <div className="h-12 w-12 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center mb-8">
-                            <span className="font-bold text-2xl">B</span>
+                            <span className="font-bold text-2xl">dr</span>
                         </div>
                         <h1 className="text-5xl font-bold leading-tight mb-6">
                             Delivery <br />

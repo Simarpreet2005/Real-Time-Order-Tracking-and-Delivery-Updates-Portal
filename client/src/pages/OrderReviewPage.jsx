@@ -19,6 +19,7 @@ const OrderReviewPage = ({ cart }) => {
             const user = JSON.parse(localStorage.getItem('user'));
             const orderData = {
                 trackingId: `ORD-${Date.now()}`,
+                customerId: user._id || user.id,
                 customer: {
                     name: user?.name || 'Guest User',
                     address: localStorage.getItem('deliveryAddress') || '123, Green Street, Tech City'

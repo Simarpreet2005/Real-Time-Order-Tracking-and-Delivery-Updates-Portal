@@ -40,6 +40,7 @@ const Map = ({ order }) => {
 
     // Hardcoding demo locations if missing
     const storePos = [28.6139, 77.2090];
+    // Ensure riderPos updates trigger re-render
     const riderPos = currentLocation;
     const destPos = [28.62, 77.22]; // Slightly away
 

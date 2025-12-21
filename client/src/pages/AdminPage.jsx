@@ -213,7 +213,7 @@ const AdminPage = ({ onLogout }) => {
                             <div className="space-y-2">
                                 <p className="text-sm font-medium">Update Status</p>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'].map(status => (
+                                    {['Ordered', 'Packed', 'Shipped'].map(status => (
                                         <button
                                             key={status}
                                             onClick={() => updateStatus(status)}
