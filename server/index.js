@@ -20,22 +20,29 @@ const io = socketIo(server, {
     }
 });
 
-const { startSimulation } = require('./services/simulation');
-
 io.on('connection', (socket) => {
     console.log('New client connected', socket.id);
 
     socket.on('joinOrder', (trackingId) => {
         socket.join(trackingId);
-        console.log(`Socket ${socket.id} joined order ${trackingId}`);
+        console.log(`[DEBUG] Socket ${socket.id} joined ORDER room: ${trackingId}`);
+    });
 
-        // Trigger simulation for this tracking ID
-        // For demo, we assume a fixed route or get it from DB. 
-        // Here passing some offsets to make it look real.
-        startSimulation(io, trackingId,
-            { lat: 28.6139, lng: 77.2090 }, // Start (Dark Store)
-            { lat: 28.6300, lng: 77.2200 }  // End (Customer)
-        );
+    socket.on('joinRiderRoom', (riderId) => {
+        socket.join(`rider_${riderId}`);
+        console.log(`[DEBUG] Socket ${socket.id} joined RIDER room: rider_${riderId} for Rider ID: ${riderId}`);
+    });
+
+    socket.on('joinAdminRoom', () => {
+        socket.join('admin');
+        console.log(`[DEBUG] Socket ${socket.id} joined ADMIN room`);
+    });
+
+    socket.on('updateLocation', (data) => {
+        // data: { trackingId, location: { lat, lng } }
+        const { trackingId, location } = data;
+        io.to(trackingId).emit('locationUpdate', location);
+        console.log(`[DEBUG] Location update for ${trackingId}:`, location);
     });
 
     socket.on('disconnect', () => {
@@ -52,6 +59,8 @@ mongoose.connect(MONGO_URI)
 // Routes
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+const userRoutes = require('./routes/users');
+app.use('/api/users', userRoutes);
 const orderRoutes = require('./routes/orders')(io);
 app.use('/api/orders', orderRoutes);
 

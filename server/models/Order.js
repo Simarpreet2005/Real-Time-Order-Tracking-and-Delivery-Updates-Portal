@@ -11,6 +11,11 @@ const OrderSchema = new mongoose.Schema({
     address: String,
     phone: String
   },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   status: {
     type: String,
     enum: ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'],
@@ -20,6 +25,11 @@ const OrderSchema = new mongoose.Schema({
     lat: Number,
     lng: Number,
     address: String
+  },
+  deliveryPersonId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   },
   history: [{
     status: String,
