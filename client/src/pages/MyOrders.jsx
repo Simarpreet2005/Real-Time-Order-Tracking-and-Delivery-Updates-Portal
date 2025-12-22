@@ -88,6 +88,29 @@ const MyOrders = () => {
                                             }`}>
                                             {order.status}
                                         </span>
+                                        {['Ordered', 'Packed', 'Shipped', 'Out for Delivery'].includes(order.status) && (
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm('Are you sure you want to cancel this order?')) {
+                                                        try {
+                                                            await axios.put(`http://localhost:5000/api/orders/${order.trackingId}/cancel`);
+                                                            alert('Order cancelled successfully');
+                                                            // Reload orders locally
+                                                            const newOrders = orders.map(o =>
+                                                                o.trackingId === order.trackingId ? { ...o, status: 'Cancelled' } : o
+                                                            );
+                                                            setOrders(newOrders);
+                                                        } catch (err) {
+                                                            alert(err.response?.data?.message || 'Failed to cancel order');
+                                                        }
+                                                    }
+                                                }}
+                                                className="text-xs text-red-500 font-bold hover:underline"
+                                            >
+                                                Cancel Order
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
