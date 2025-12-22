@@ -28,6 +28,10 @@ function App() {
     });
   };
 
+  const clearCart = () => {
+    setCart([]);
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -58,7 +62,7 @@ function App() {
           } />
           <Route path="/review" element={
             <ProtectedRoute user={user} role="customer">
-              <OrderReviewPage cart={cart} />
+              <OrderReviewPage cart={cart} clearCart={clearCart} />
             </ProtectedRoute>
           } />
           <Route path="/track/:trackingId" element={

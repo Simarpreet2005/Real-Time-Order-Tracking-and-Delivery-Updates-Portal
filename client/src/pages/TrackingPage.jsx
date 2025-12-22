@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { Package, Truck, CheckCircle, Clock, MapPin, Navigation, ChevronLeft, Phone, MessageCircle } from 'lucide-react';
+import { Package, Truck, CheckCircle, Clock, MapPin, Navigation, ChevronLeft, Phone, MessageCircle, ShoppingBag } from 'lucide-react';
 import Map from '../components/Map';
 
 const TrackingPage = () => {
@@ -72,9 +72,15 @@ const TrackingPage = () => {
                         <Truck className="w-32 h-32" />
                     </div>
 
-                    <button onClick={() => navigate('/')} className="mb-6 hover:bg-white/10 p-2 rounded-full w-fit transition-colors">
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={() => navigate('/')} className="hover:bg-white/10 p-2 rounded-full transition-colors">
+                            <ChevronLeft className="w-6 h-6" />
+                        </button>
+                        <button onClick={() => navigate('/')} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full text-sm font-bold transition-all backdrop-blur-md border border-white/10">
+                            <ShoppingBag className="w-4 h-4" />
+                            Shop More
+                        </button>
+                    </div>
 
                     <h1 className="text-3xl font-bold mb-2 mt-4">Arriving in 8 mins</h1>
                     <p className="text-slate-400 text-sm mb-8">On time • 12:42 PM</p>

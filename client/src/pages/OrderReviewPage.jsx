@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowRight, MapPin, CreditCard, ChevronLeft, Clock, ShieldCheck, Home } from 'lucide-react';
 
-const OrderReviewPage = ({ cart }) => {
+const OrderReviewPage = ({ cart, clearCart }) => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
@@ -29,11 +29,13 @@ const OrderReviewPage = ({ cart }) => {
             };
 
             const res = await axios.post('http://localhost:5000/api/orders', orderData);
+            clearCart(); // Clear cart after successful order
             navigate(`/track/${res.data.trackingId}`);
         } catch (err) {
             console.error(err);
             // Fallback for demo if backend is down
             const fallbackId = `ORD-${Date.now()}`;
+            clearCart(); // Clear cart even in fallback
             navigate(`/track/${fallbackId}`);
         } finally {
             setLoading(false);
