@@ -59,7 +59,7 @@ const TrackingPage = () => {
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Connecting to GPS...</div>;
 
-    const steps = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+    const steps = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
     const currentStepIndex = steps.indexOf(order?.status || 'Ordered');
 
     return (

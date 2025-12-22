@@ -56,33 +56,53 @@ const RiderDashboard = ({ onLogout }) => {
             console.log("Starting GPS tracking for orders:", activeOrders.map(o => o.trackingId));
             setGpsStatus('searching');
 
-            const startWatch = (highAccuracy = true) => {
+            const errorCallback = (err) => {
+                console.error("GPS Watch Error:", err.message);
+
+                if (err.code === err.PERMISSION_DENIED) {
+                    setGpsStatus('error');
+                    console.error("Permission denied for GPS tracking.");
+                    // Stop trying if permission is denied
+                    if (watchId) navigator.geolocation.clearWatch(watchId);
+                    return;
+                }
+
+                if (highAccuracyMode) {
+                    // Fallback to low accuracy if high fails
+                    console.log("High accuracy failed, switching to low accuracy...");
+                    highAccuracyMode = false;
+                    if (watchId) navigator.geolocation.clearWatch(watchId);
+                    startWatch(false);
+                } else {
+                    // Even low accuracy failed, just log it but keep trying (maybe temporary signal loss)
+                    setGpsStatus('error');
+                }
+            };
+
+            let highAccuracyMode = true;
+
+            const startWatch = (highAccuracy) => {
                 watchId = navigator.geolocation.watchPosition(
                     (pos) => {
                         const { latitude, longitude } = pos.coords;
-                        console.log(`[GPS UPDATE] Lat: ${latitude}, Lng: ${longitude}`);
-                        setGpsStatus('active');
-                        activeOrders.forEach(order => {
-                            socket.emit('updateLocation', {
-                                trackingId: order.trackingId,
-                                location: { lat: latitude, lng: longitude }
+                        console.log(`[GPS UPDATE] Lat: ${latitude}, Lng: ${longitude} (Accuracy: ${pos.coords.accuracy}m)`);
+
+                        // Only update if we have meaningful coordinates
+                        if (latitude && longitude) {
+                            setGpsStatus('active');
+                            activeOrders.forEach(order => {
+                                socket.emit('updateLocation', {
+                                    trackingId: order.trackingId,
+                                    location: { lat: latitude, lng: longitude }
+                                });
                             });
-                        });
-                    },
-                    (err) => {
-                        console.error("GPS Watch Error:", err);
-                        if (highAccuracy && (err.code === 2 || err.code === 3)) {
-                            console.log("Retrying GPS watch with lower accuracy...");
-                            navigator.geolocation.clearWatch(watchId);
-                            startWatch(false);
-                        } else {
-                            setGpsStatus('error');
                         }
                     },
+                    errorCallback,
                     {
                         enableHighAccuracy: highAccuracy,
-                        maximumAge: 15000,
-                        timeout: 30000
+                        maximumAge: 0, // Force fresh data
+                        timeout: 10000
                     }
                 );
             };
@@ -90,6 +110,10 @@ const RiderDashboard = ({ onLogout }) => {
             startWatch(true);
         } else {
             console.log("No active orders or GPS not supported.");
+            if (!("geolocation" in navigator)) {
+                console.error("Geolocation is not supported by this browser.");
+                setGpsStatus('error');
+            }
         }
 
         return () => {
@@ -121,6 +145,7 @@ const RiderDashboard = ({ onLogout }) => {
             const getAddress = async (lat, lng) => {
                 try {
                     const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    if (!geoRes.ok) throw new Error("Nominatim API Error");
                     const geoData = await geoRes.json();
                     return geoData.display_name;
                 } catch (e) {
@@ -139,24 +164,35 @@ const RiderDashboard = ({ onLogout }) => {
                 };
 
                 try {
-                    // Attempt 1: High Accuracy (15s timeout)
+                    // Attempt 1: High Accuracy (10s timeout)
                     console.log("Attempting High Accuracy GPS...");
-                    const pos = await getPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+                    const pos = await getPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }); // MaximumAge 0 to force fresh reading
                     const address = await getAddress(pos.coords.latitude, pos.coords.longitude);
                     await updateStatus({ lat: pos.coords.latitude, lng: pos.coords.longitude, address });
 
                 } catch (err1) {
-                    console.warn("High Accuracy GPS failed/timed out:", err1.message);
+                    console.warn("High Accuracy GPS failed:", err1.message);
+
+                    // If permission denied, do not retry
+                    if (err1.code === err1.PERMISSION_DENIED) {
+                        console.error("User denied Geolocation permission.");
+                        alert("Please enable location services to deliver orders.");
+                        await updateStatus(null);
+                        return;
+                    }
 
                     try {
-                        // Attempt 2: Low Accuracy (15s timeout) - faster, uses cell towers/WiFi
+                        // Attempt 2: Low Accuracy (10s timeout)
                         console.log("Retrying with Low Accuracy GPS...");
-                        const pos = await getPosition({ enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 });
+                        const pos = await getPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 0 });
                         const address = await getAddress(pos.coords.latitude, pos.coords.longitude);
                         await updateStatus({ lat: pos.coords.latitude, lng: pos.coords.longitude, address });
 
                     } catch (err2) {
                         console.error("All GPS attempts failed:", err2.message);
+                        if (err2.code === err2.PERMISSION_DENIED) {
+                            alert("Please enable location services to deliver orders.");
+                        }
                         console.log("Proceeding without location.");
                         // Attempt 3: No Location
                         await updateStatus(null);
