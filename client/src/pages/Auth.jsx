@@ -156,7 +156,6 @@ const Auth = ({ onLogin }) => {
                                     >
                                         <option value="customer">Hungry Customer</option>
                                         <option value="rider">Delivery Partner</option>
-                                        <option value="admin">Administrator</option>
                                     </select>
                                 </div>
                             )}

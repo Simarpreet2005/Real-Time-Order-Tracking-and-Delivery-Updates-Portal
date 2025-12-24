@@ -63,6 +63,8 @@ const userRoutes = require('./routes/users');
 app.use('/api/users', userRoutes);
 const orderRoutes = require('./routes/orders')(io);
 app.use('/api/orders', orderRoutes);
+const productRoutes = require('./routes/products');
+app.use('/api/products', productRoutes);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

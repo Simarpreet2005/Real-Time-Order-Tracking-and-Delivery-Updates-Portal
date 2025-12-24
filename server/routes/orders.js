@@ -1,22 +1,114 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
+const { WAREHOUSE_COORDS, decodePlusCode, getOSRMRoute, checkDeliveryRange } = require('../utils/geo');
 
 module.exports = (io) => {
+    // Delivery Simulation Interval Map
+    const activeSimulations = new Map();
+
+    const startSimulation = async (order) => {
+        if (activeSimulations.has(order.trackingId)) return;
+
+        console.log(`[SIMULATION] Starting for ${order.trackingId}`);
+
+        // Set start time if not set
+        if (!order.deliveryStartTime) {
+            order.deliveryStartTime = new Date();
+            await order.save();
+        }
+
+        const routePoints = order.route;
+
+        if (!routePoints || routePoints.length === 0) {
+            console.log('[SIMULATION] No route data found.');
+            return;
+        }
+
+        let currentIndex = 0;
+        const totalPoints = routePoints.length;
+
+        const intervalId = setInterval(async () => {
+            if (currentIndex >= totalPoints) {
+                clearInterval(intervalId);
+                activeSimulations.delete(order.trackingId);
+
+                // Auto-mark as delivered when route ends
+                order.status = 'Delivered';
+                order.history.push({ status: 'Delivered', location: 'Customer Location' });
+                order.currentLocation = routePoints[totalPoints - 1]; // Set to last point
+                await order.save();
+
+                io.to(order.trackingId).emit('orderUpdated', order);
+                io.to('admin').emit('orderUpdated', order);
+                console.log(`[SIMULATION] Finished for ${order.trackingId}`);
+                return;
+            }
+
+            const location = routePoints[currentIndex];
+
+            // Emit location update
+            io.to(order.trackingId).emit('locationUpdate', location);
+
+            // Advance index
+            currentIndex += 1;
+
+        }, 1000); // 1 update per second
+
+        activeSimulations.set(order.trackingId, intervalId);
+    };
+
     // Create a new order
     router.post('/', async (req, res) => {
         try {
-            const { customer, trackingId, initialLocation, customerId } = req.body;
+            const { customer, trackingId, customerId, paymentMethod, paymentStatus } = req.body;
+            const plusCode = customer.plusCode;
+
+            if (!plusCode) {
+                return res.status(400).json({ message: 'Plus Code is required for delivery.' });
+            }
+
+            // 1. Resolve Locations
+            const warehouseLoc = WAREHOUSE_COORDS;
+            let customerLoc;
+            try {
+                customerLoc = decodePlusCode(plusCode);
+            } catch (e) {
+                return res.status(400).json({ message: e.message });
+            }
+
+            // 2. Get Route
+            const routeData = await getOSRMRoute(warehouseLoc, customerLoc);
+
+            // 3. Check Range
+            const { allowed, distance } = checkDeliveryRange(routeData.distance);
+            if (!allowed) {
+                const distanceKm = (distance / 1000).toFixed(2);
+                return res.status(400).json({ message: `Location is too far (${distanceKm}km). We only deliver within 3km.` });
+            }
+
+            // 3. Create Order
             const newOrder = new Order({
                 trackingId,
-                customer,
+                customer: {
+                    ...customer,
+                    address: customerLoc.address
+                },
                 customerId,
-                currentLocation: initialLocation,
-                history: [{ status: 'Ordered', location: initialLocation?.address || 'Warehouse' }]
+                paymentMethod: paymentMethod || 'COD',
+                paymentStatus: paymentStatus || 'Pending',
+                plusCode: plusCode,
+                currentLocation: warehouseLoc, // Start at Warehouse
+                route: routeData.geometry,
+                totalDuration: routeData.duration, // Save OSRM duration (seconds)
+                history: [{ status: 'Ordered', location: 'Warehouse' }]
             });
+
             await newOrder.save();
             res.status(201).json(newOrder);
+
         } catch (err) {
+            console.error(err);
             res.status(500).json({ error: err.message });
         }
     });
@@ -103,6 +195,30 @@ module.exports = (io) => {
             io.to(order.trackingId).emit('orderUpdated', order);
             io.to('admin').emit('orderUpdated', order);
 
+            // Trigger Simulation if Out for Delivery
+            if (status === 'Out for Delivery') {
+                startSimulation(order);
+            }
+
+            res.json(order);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Verify Payment (Admin only ideally)
+    router.put('/:trackingId/payment', async (req, res) => {
+        try {
+            const { status } = req.body;
+            const order = await Order.findOne({ trackingId: req.params.trackingId }).populate('deliveryPersonId', 'name email');
+            if (!order) return res.status(404).json({ message: 'Order not found' });
+
+            order.paymentStatus = status;
+            await order.save();
+
+            io.to(order.trackingId).emit('orderUpdated', order);
+            io.to('admin').emit('orderUpdated', order);
+
             res.json(order);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -114,6 +230,12 @@ module.exports = (io) => {
         try {
             const order = await Order.findOne({ trackingId: req.params.trackingId });
             if (!order) return res.status(404).json({ message: 'Order not found' });
+
+            // Stop simulation if running
+            if (activeSimulations.has(order.trackingId)) {
+                clearInterval(activeSimulations.get(order.trackingId));
+                activeSimulations.delete(order.trackingId);
+            }
 
             if (!['Ordered', 'Packed'].includes(order.status)) {
                 return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });

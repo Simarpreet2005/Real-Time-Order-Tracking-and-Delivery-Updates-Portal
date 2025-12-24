@@ -82,8 +82,33 @@ const TrackingPage = () => {
                         </button>
                     </div>
 
-                    <h1 className="text-3xl font-bold mb-2 mt-4">Arriving in 8 mins</h1>
-                    <p className="text-slate-400 text-sm mb-8">On time • 12:42 PM</p>
+                    {/* Dynamic ETA */}
+                    {(() => {
+                        if (!order?.totalDuration || !order?.deliveryStartTime) {
+                            return <h1 className="text-3xl font-bold mb-2 mt-4">Arriving soon</h1>;
+                        }
+
+                        // Calculate remaining time
+                        // Total Duration (seconds) - (Now - StartTime (seconds))
+                        const startTime = new Date(order.deliveryStartTime).getTime();
+                        const now = new Date().getTime();
+                        const elapsedSeconds = (now - startTime) / 1000;
+                        const remainingSeconds = Math.max(0, order.totalDuration - elapsedSeconds);
+                        const remainingMins = Math.ceil(remainingSeconds / 60);
+
+                        let timeText = `${remainingMins} mins`;
+                        if (remainingMins <= 0) timeText = 'Arriving now';
+                        else if (remainingMins > 60) timeText = `${Math.floor(remainingMins / 60)} hr ${remainingMins % 60} min`;
+
+                        return (
+                            <>
+                                <h1 className="text-3xl font-bold mb-2 mt-4">Arrived</h1>
+                                <p className="text-slate-400 text-sm mb-8">
+                                    {order.status === 'Delivered' ? 'Delivered' : 'On time'} • {new Date(startTime + order.totalDuration * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            </>
+                        );
+                    })()}
 
                     <div className="mt-4 flex gap-4">
                         <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex-1 flex items-center gap-4 border border-white/10">

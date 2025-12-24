@@ -13,6 +13,7 @@ const AdminPage = ({ onLogout }) => {
         customerName: '',
         address: ''
     });
+    const [newProduct, setNewProduct] = useState({ name: '', price: '', weight: '', image: '' });
 
     const fetchOrders = async () => {
         try {
@@ -87,6 +88,18 @@ const AdminPage = ({ onLogout }) => {
         }
     };
 
+    const createProduct = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post('http://localhost:5000/api/products', newProduct);
+            setNewProduct({ name: '', price: '', weight: '', image: '' });
+            alert('Product Added!');
+        } catch (err) {
+            console.error(err);
+            alert('Failed to add product');
+        }
+    };
+
     const updateStatus = async (status) => {
         if (!selectedOrder) return;
         try {
@@ -97,6 +110,20 @@ const AdminPage = ({ onLogout }) => {
             setOrders(orders.map(o => o.trackingId === updated.trackingId ? updated : o));
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const verifyPayment = async () => {
+        if (!selectedOrder) return;
+        try {
+            const res = await axios.put(`http://localhost:5000/api/orders/${selectedOrder.trackingId}/payment`, { status: 'Success' });
+            const updated = res.data;
+            setSelectedOrder(updated);
+            setOrders(orders.map(o => o.trackingId === updated.trackingId ? updated : o));
+            alert('Payment Verified!');
+        } catch (err) {
+            console.error(err);
+            alert('Verification failed');
         }
     };
 
@@ -116,38 +143,87 @@ const AdminPage = ({ onLogout }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Create Order Panel */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm h-fit">
-                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Plus className="h-5 w-5" /> New Order
-                    </h2>
-                    <form onSubmit={createOrder} className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Customer Name"
-                            className="w-full p-3 border rounded-lg"
-                            value={newOrder.customerName}
-                            onChange={e => setNewOrder({ ...newOrder, customerName: e.target.value })}
-                            required
-                        />
-                        <input
-                            type="text"
-                            placeholder="Delivery Address"
-                            className="w-full p-3 border rounded-lg"
-                            value={newOrder.address}
-                            onChange={e => setNewOrder({ ...newOrder, address: e.target.value })}
-                            required
-                        />
-                        <input
-                            type="text"
-                            placeholder="Tracking ID (Optional)"
-                            className="w-full p-3 border rounded-lg"
-                            value={newOrder.trackingId}
-                            onChange={e => setNewOrder({ ...newOrder, trackingId: e.target.value })}
-                        />
-                        <button type="submit" className="w-full bg-black text-white py-3 rounded-lg font-bold">
-                            Create Order
-                        </button>
-                    </form>
+                <div className="bg-white p-6 rounded-2xl shadow-sm h-fit space-y-8">
+                    {/* New Order Form */}
+                    <div>
+                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                            <Plus className="h-5 w-5" /> New Order
+                        </h2>
+                        <form onSubmit={createOrder} className="space-y-4">
+                            <input
+                                type="text"
+                                placeholder="Customer Name"
+                                className="w-full p-3 border rounded-lg"
+                                value={newOrder.customerName}
+                                onChange={e => setNewOrder({ ...newOrder, customerName: e.target.value })}
+                                required
+                            />
+                            <input
+                                type="text"
+                                placeholder="Delivery Address"
+                                className="w-full p-3 border rounded-lg"
+                                value={newOrder.address}
+                                onChange={e => setNewOrder({ ...newOrder, address: e.target.value })}
+                                required
+                            />
+                            <input
+                                type="text"
+                                placeholder="Tracking ID (Optional)"
+                                className="w-full p-3 border rounded-lg"
+                                value={newOrder.trackingId}
+                                onChange={e => setNewOrder({ ...newOrder, trackingId: e.target.value })}
+                            />
+                            <button type="submit" className="w-full bg-black text-white py-3 rounded-lg font-bold">
+                                Create Order
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Add Product Form */}
+                    <div className="pt-8 border-t">
+                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                            <Plus className="h-5 w-5" /> Add New Item
+                        </h2>
+                        <form onSubmit={createProduct} className="space-y-4">
+                            <input
+                                type="text"
+                                placeholder="Product Name"
+                                className="w-full p-3 border rounded-lg"
+                                value={newProduct.name}
+                                onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                                required
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="Price (₹)"
+                                    className="w-full p-3 border rounded-lg"
+                                    value={newProduct.price}
+                                    onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                                    required
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Weight (e.g. 500g)"
+                                    className="w-full p-3 border rounded-lg"
+                                    value={newProduct.weight}
+                                    onChange={e => setNewProduct({ ...newProduct, weight: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Image Link"
+                                className="w-full p-3 border rounded-lg"
+                                value={newProduct.image}
+                                onChange={e => setNewProduct({ ...newProduct, image: e.target.value })}
+                                required
+                            />
+                            <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">
+                                Add Item
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
                 {/* Order List */}
@@ -188,25 +264,52 @@ const AdminPage = ({ onLogout }) => {
                                     <p><strong>Customer:</strong> {selectedOrder.customer?.name}</p>
                                     <p><strong>Email:</strong> {selectedOrder.customer?.email || 'N/A'}</p>
                                     <p><strong>Address:</strong> {selectedOrder.customer?.address}</p>
+                                    <hr className="my-2" />
+                                    <p>
+                                        <strong>Payment:</strong> <span className="font-mono">{selectedOrder.paymentMethod || 'COD'}</span>
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <strong>Status:</strong>
+                                        <span className={`text-xs px-2 py-1 rounded-full ${selectedOrder.paymentStatus === 'Success' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                            {selectedOrder.paymentStatus || 'Pending'}
+                                        </span>
+                                        {selectedOrder.paymentMethod !== 'COD' && selectedOrder.paymentStatus !== 'Success' && (
+                                            <button
+                                                onClick={verifyPayment}
+                                                className="text-xs bg-black text-white px-2 py-1 rounded hover:bg-gray-800"
+                                            >
+                                                Verify
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
                                 <p className="text-sm font-medium">Assign Delivery Partner</p>
-                                <select
-                                    className="w-full p-3 border rounded-lg bg-white"
-                                    onChange={(e) => assignRider(e.target.value)}
-                                    value={selectedOrder.deliveryPersonId?._id || ""}
-                                >
-                                    <option value="">Select Rider</option>
-                                    {riders.map(r => (
-                                        <option key={r._id} value={r._id}>{r.name} ({r.email})</option>
-                                    ))}
-                                </select>
-                                {selectedOrder.deliveryPersonId && (
-                                    <p className="text-xs text-green-600 font-bold mt-1">
-                                        Assigned to: {selectedOrder.deliveryPersonId.name}
-                                    </p>
+                                {selectedOrder.paymentMethod !== 'COD' && selectedOrder.paymentStatus !== 'Success' ? (
+                                    <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg border border-red-100 flex items-center gap-2">
+                                        <RefreshCw className="w-4 h-4" />
+                                        <span>Payment verification required before assignment.</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <select
+                                            className="w-full p-3 border rounded-lg bg-white"
+                                            onChange={(e) => assignRider(e.target.value)}
+                                            value={selectedOrder.deliveryPersonId?._id || ""}
+                                        >
+                                            <option value="">Select Rider</option>
+                                            {riders.map(r => (
+                                                <option key={r._id} value={r._id}>{r.name} ({r.email})</option>
+                                            ))}
+                                        </select>
+                                        {selectedOrder.deliveryPersonId && (
+                                            <p className="text-xs text-green-600 font-bold mt-1">
+                                                Assigned to: {selectedOrder.deliveryPersonId.name}
+                                            </p>
+                                        )}
+                                    </>
                                 )}
                             </div>
 

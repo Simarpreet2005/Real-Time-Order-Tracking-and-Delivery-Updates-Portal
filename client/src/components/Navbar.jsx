@@ -40,7 +40,44 @@ const Navbar = ({ cartCount = 0, user, onLogout }) => {
         if (!localStorage.getItem('deliveryAddress')) {
             getLocation();
         }
+
+        const handleStorageChange = () => {
+            setAddress(localStorage.getItem('deliveryAddress') || "Detecting location...");
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
+
+    // Fetch user addresses if logged in
+    React.useEffect(() => {
+        if (user && user._id) {
+            fetch(`http://localhost:5000/api/auth/${user._id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.addresses) {
+                        // We could store this in local state or just use it in the modal
+                        // For now, we'll fetch it when modal opens or keep it in a state
+                    }
+                })
+                .catch(err => console.error("Failed to fetch user addresses for navbar", err));
+        }
+    }, [user]);
+
+    const [savedAddresses, setSavedAddresses] = useState([]);
+
+    React.useEffect(() => {
+        if (showLocationModal && user && user._id) {
+            fetch(`http://localhost:5000/api/auth/${user._id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.addresses) {
+                        setSavedAddresses(data.addresses);
+                    }
+                })
+                .catch(err => console.error("Failed to fetch addresses in modal", err));
+        }
+    }, [showLocationModal, user]);
 
     const handleManualAddress = (e) => {
         e.preventDefault();
@@ -163,6 +200,30 @@ const Navbar = ({ cartCount = 0, user, onLogout }) => {
                                     <span className="block text-xs opacity-70">Using GPS</span>
                                 </div>
                             </button>
+
+                            {savedAddresses.length > 0 && (
+                                <div className="space-y-2 max-h-40 overflow-y-auto">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Saved Addresses</p>
+                                    {savedAddresses.map((addr, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                updateAddress(`${addr.label} (${addr.plusCode})`);
+                                                setShowLocationModal(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                                <MapPin className="w-4 h-4 text-slate-500" />
+                                            </div>
+                                            <div>
+                                                <span className="block font-bold text-sm text-slate-900">{addr.label}</span>
+                                                <span className="block text-xs text-slate-500 font-mono">{addr.plusCode}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
 
                             <div className="relative">
                                 <div className="absolute inset-0 flex items-center">

@@ -11,9 +11,9 @@ const Footer = () => {
                     <div className="space-y-4">
                         <div className="flex items-center gap-2">
                             <div className="bg-primary p-2 rounded-lg">
-                                <span className="text-white font-bold text-lg">BV</span>
+                                <span className="text-white font-bold text-lg">dr</span>
                             </div>
-                            <span className="font-bold text-2xl text-slate-900">BlinkVibe</span>
+                            <span className="font-bold text-2xl text-slate-900">delivery reimagined</span>
                         </div>
                         <p className="text-slate-500 text-sm leading-relaxed">
                             Experience the future of delivery. Superfast delivery, premium products, and exceptional service right at your doorstep.

@@ -1,9 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { ArrowRight, ChevronRight, Zap } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 
 const Home = ({ addToCart }) => {
-    const [searchQuery, setSearchQuery] = React.useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [products, setProducts] = useState([]);
+
+    const staticBestSellers = [
+        { id: 's1', name: 'Amul Taaza Fresh Milk', weight: '500 ml', price: 27, originalPrice: 30, image: 'https://www.bigbasket.com/media/uploads/p/l/306926_4-amul-homogenised-toned-milk.jpg', discount: 10 },
+        { id: 's2', name: 'TATA Salt', weight: '1 kg', price: 28, image: '/images/tata-salt.jpg' },
+        { id: 's3', name: 'Coca-Cola Soft Drink', weight: '750 ml', price: 40, originalPrice: 45, image: '/images/coca-cola.jpg', discount: 11 },
+        { id: 's4', name: 'Britannia White Bread', weight: '400g', price: 45, image: '/images/britannia-bread.jpg' },
+        { id: 's5', name: 'Amul Pasteurized Butter', weight: '100g', price: 56, image: '/images/amul-butter.jpg' },
+        { id: 's6', name: 'Fortune Sun Lite Oil', weight: '1 L', price: 145, originalPrice: 170, image: '/images/fortune-oil.jpg', discount: 15 },
+    ];
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const res = await axios.get('http://localhost:5000/api/products');
+                setProducts(res.data);
+            } catch (err) {
+                console.error("Failed to fetch products", err);
+            }
+        };
+        fetchProducts();
+    }, []);
 
     // Mock Data for Visuals
     const categories = [
@@ -19,16 +42,9 @@ const Home = ({ addToCart }) => {
         { name: 'Pet', img: 'https://cdn-icons-png.flaticon.com/512/194/194279.png', color: 'bg-gray-100' },
     ];
 
-    const products = [
-        { id: 1, name: 'Amul Taaza Fresh Milk', weight: '500 ml', price: 27, originalPrice: 30, image: 'https://www.bigbasket.com/media/uploads/p/l/306926_4-amul-homogenised-toned-milk.jpg', discount: 10 },
-        { id: 2, name: 'Lays India\'s Magic Masala', weight: '50g', price: 20, image: '/images/lays.png' },
-        { id: 3, name: 'Coca-Cola Soft Drink', weight: '750 ml', price: 40, originalPrice: 45, image: '/images/coke.png', discount: 11 },
-        { id: 4, name: 'Fortune Sun Lite Oil', weight: '1 L', price: 145, originalPrice: 170, image: 'https://www.bigbasket.com/media/uploads/p/l/274145_14-fortune-sun-lite-sunflower-refined-oil.jpg', discount: 15 },
-        { id: 5, name: 'Aashirvaad Atta', weight: '5 kg', price: 240, originalPrice: 280, image: '/images/atta.png', discount: 14 },
-        { id: 6, name: 'Tata Salt Vacuum', weight: '1 kg', price: 28, image: '/images/salt.png' },
-    ];
 
-    const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredBestSellers = staticBestSellers.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredFreshItems = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
         <div className="pb-20 bg-slate-50 min-h-screen">
@@ -133,18 +149,13 @@ const Home = ({ addToCart }) => {
                     </div>
                     {/* Horizontal Scroll Area */}
                     <div className="flex gap-4 overflow-x-auto pb-8 hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                        {filteredProducts.map(product => (
+                        {filteredBestSellers.map(product => (
                             <ProductCard key={product.id} product={product} onAdd={addToCart} />
                         ))}
-                        {filteredProducts.length === 0 && (
-                            <div className="py-12 bg-white rounded-2xl w-full text-center border border-dashed border-gray-200">
-                                <p className="text-gray-400 font-medium italic">No items matching "{searchQuery}"</p>
-                            </div>
-                        )}
                     </div>
                 </section>
 
-                {/* Product Feed: Freshly Added */}
+                {/* Product Feed: Freshly Added (From DB) */}
                 <section>
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold text-slate-800">Freshly Added</h2>
@@ -153,9 +164,16 @@ const Home = ({ addToCart }) => {
                         </button>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-8 hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                        {[...filteredProducts].reverse().map(product => (
-                            <ProductCard key={product.id} product={product} onAdd={addToCart} />
-                        ))}
+                        {filteredFreshItems.length > 0 ? (
+                            // Reverse to show newest first
+                            [...filteredFreshItems].reverse().map(product => (
+                                <ProductCard key={product._id || product.id} product={product} onAdd={addToCart} />
+                            ))
+                        ) : (
+                            <div className="py-12 bg-white rounded-2xl w-full text-center border border-dashed border-gray-200">
+                                <p className="text-gray-400 font-medium italic">No new items added yet.</p>
+                            </div>
+                        )}
                     </div>
                 </section>
 

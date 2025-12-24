@@ -77,12 +77,48 @@ router.post('/login', async (req, res) => {
 
         jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' }, (err, token) => {
             if (err) throw err;
-            res.json({ token, user: { id: user.id, _id: user.id, name: user.name, role: user.role } });
+            res.json({
+                token,
+                user: {
+                    id: user.id,
+                    _id: user.id,
+                    name: user.name,
+                    role: user.role,
+                    addresses: user.addresses
+                }
+            });
         });
 
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
+    }
+});
+
+// Add Address
+router.post('/address', async (req, res) => {
+    try {
+        const { userId, label, plusCode } = req.body;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        user.addresses.push({ label, plusCode });
+        await user.save();
+
+        res.json(user.addresses);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get User (to refresh profile)
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

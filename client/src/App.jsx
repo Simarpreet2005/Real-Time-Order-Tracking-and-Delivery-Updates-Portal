@@ -9,6 +9,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import MenuPage from './pages/MenuPage';
 import OrderReviewPage from './pages/OrderReviewPage';
+import PaymentVerificationPage from './pages/PaymentVerificationPage';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import RiderDashboard from './pages/RiderDashboard';
@@ -63,6 +64,11 @@ function App() {
           <Route path="/review" element={
             <ProtectedRoute user={user} role="customer">
               <OrderReviewPage cart={cart} clearCart={clearCart} />
+            </ProtectedRoute>
+          } />
+          <Route path="/verify/:trackingId" element={
+            <ProtectedRoute user={user} role="customer">
+              <PaymentVerificationPage />
             </ProtectedRoute>
           } />
           <Route path="/track/:trackingId" element={

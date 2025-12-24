@@ -9,6 +9,7 @@ const RiderDashboard = ({ onLogout }) => {
     const [orders, setOrders] = useState([]);
     const [user] = useState(JSON.parse(localStorage.getItem('user')));
     const [gpsStatus, setGpsStatus] = useState('idle'); // idle, searching, active, error
+    const [loadingOrderId, setLoadingOrderId] = useState(null);
 
 
     useEffect(() => {
@@ -101,6 +102,9 @@ const RiderDashboard = ({ onLogout }) => {
     }, [orders]);
 
     const handleStatusUpdate = async (trackingId, nextStatus) => {
+        if (loadingOrderId) return; // Prevent double clicks
+        setLoadingOrderId(trackingId);
+
         try {
             console.log(`Updating status to ${nextStatus} for ${trackingId}`);
 
@@ -139,9 +143,9 @@ const RiderDashboard = ({ onLogout }) => {
                 };
 
                 try {
-                    // Attempt 1: High Accuracy (15s timeout)
+                    // Attempt 1: High Accuracy (3s timeout) - FAST
                     console.log("Attempting High Accuracy GPS...");
-                    const pos = await getPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+                    const pos = await getPosition({ enableHighAccuracy: true, timeout: 3000, maximumAge: 10000 });
                     const address = await getAddress(pos.coords.latitude, pos.coords.longitude);
                     await updateStatus({ lat: pos.coords.latitude, lng: pos.coords.longitude, address });
 
@@ -149,16 +153,16 @@ const RiderDashboard = ({ onLogout }) => {
                     console.warn("High Accuracy GPS failed/timed out:", err1.message);
 
                     try {
-                        // Attempt 2: Low Accuracy (15s timeout) - faster, uses cell towers/WiFi
+                        // Attempt 2: Low Accuracy (3s timeout) - FAST FALLBACK
                         console.log("Retrying with Low Accuracy GPS...");
-                        const pos = await getPosition({ enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 });
+                        const pos = await getPosition({ enableHighAccuracy: false, timeout: 3000, maximumAge: 10000 });
                         const address = await getAddress(pos.coords.latitude, pos.coords.longitude);
                         await updateStatus({ lat: pos.coords.latitude, lng: pos.coords.longitude, address });
 
                     } catch (err2) {
                         console.error("All GPS attempts failed:", err2.message);
                         console.log("Proceeding without location.");
-                        // Attempt 3: No Location
+                        // Attempt 3: No Location (Immediate)
                         await updateStatus(null);
                     }
                 }
@@ -169,6 +173,8 @@ const RiderDashboard = ({ onLogout }) => {
         } catch (err) {
             console.error("Critical error in logic:", err);
             alert("Unexpected error. Please try again.");
+        } finally {
+            setLoadingOrderId(null);
         }
     };
 
@@ -223,18 +229,30 @@ const RiderDashboard = ({ onLogout }) => {
                                 {order.status === 'Packed' && (
                                     <button
                                         onClick={() => handleStatusUpdate(order.trackingId, 'Out for Delivery')}
-                                        className="flex-1 bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
+                                        disabled={loadingOrderId === order.trackingId}
+                                        className="flex-1 bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        Start Delivery
+                                        {loadingOrderId === order.trackingId ? (
+                                            <>Processing...</>
+                                        ) : (
+                                            <>Start Delivery</>
+                                        )}
                                     </button>
                                 )}
                                 {order.status === 'Out for Delivery' && (
                                     <button
                                         onClick={() => handleStatusUpdate(order.trackingId, 'Delivered')}
-                                        className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                                        disabled={loadingOrderId === order.trackingId}
+                                        className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <CheckCircle2 className="h-5 w-5" />
-                                        Mark as Delivered
+                                        {loadingOrderId === order.trackingId ? (
+                                            <>Processing...</>
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 className="h-5 w-5" />
+                                                Mark as Delivered
+                                            </>
+                                        )}
                                     </button>
                                 )}
                             </div>
